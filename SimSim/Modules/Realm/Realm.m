@@ -10,7 +10,7 @@
 #import <Cocoa/Cocoa.h>
 #import "FileManager.h"
 
-#define PATHS_REALM_FILES  [NSArray arrayWithObjects: @"Documents", @"Library/Caches", nil]
+#define PATHS_REALM_FILES  [NSArray arrayWithObjects: @"Documents", @"Library/Caches", @"", nil]
 #define REALM_APP_NAME          @"Realm Browser"
 #define REALM_APP_URL           @"http://itunes.apple.com/es/app/realm-browser/id1007457278"
 

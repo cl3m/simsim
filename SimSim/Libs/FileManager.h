@@ -8,6 +8,7 @@
 
 #import <Foundation/Foundation.h>
 
+#define KEY_FILE_DIR                @"fileDir"
 #define KEY_FILE                    @"file"
 #define KEY_MODIFICATION_DATE       @"modificationDate"
 #define KEY_FILE_TYPE               @"fileType"
@@ -15,6 +16,7 @@
 @interface FileManager : NSObject
 
 + (NSArray *) getSortedFilesFromFolder:(NSString *)folderPath;
++ (NSArray *) getSortedFilesFromFolders:(NSArray<NSString*>*)folderPaths;
 + (NSString *) getApplicationFolderFromPath:(NSString *)folderPath;
 
 @end

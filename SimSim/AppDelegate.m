@@ -13,6 +13,7 @@
 #import "Realm.h"
 #import "Simulator.h"
 #import "Application.h"
+#import "AppGroup.h"
 
 //============================================================================
 @interface AppDelegate ()
@@ -197,14 +198,36 @@
 }
 
 //----------------------------------------------------------------------------
-- (void) addApplications:(NSArray<Application*>*)installedApplicationsData toMenu:(NSMenu*)menu
+- (void) addApplicationsAndAppGroups:(NSArray<NSObject*>*)installedData toMenu:(NSMenu*)menu
 {
-    for (NSUInteger i = 0; i < [installedApplicationsData count]; i++)
+    for (NSUInteger i = 0; i < [installedData count]; i++)
     {
-        Application* application = installedApplicationsData[i];
-
-        [self addApplication:application toMenu:menu];
+		if ([installedData[i] isKindOfClass:[Application class]]) {
+			[self addApplication:(Application*)installedData[i] toMenu:menu];
+		} else {
+			[self addAppGroup:(AppGroup*)installedData[i] toMenu:menu];
+		}
     }
+}
+
+//----------------------------------------------------------------------------
+- (void) addAppGroup:(AppGroup*)appGroup toMenu:(NSMenu*)menu
+{
+	NSString* title = [NSString stringWithFormat:@"%@", appGroup.bundleIdentifier];
+
+	// This path will be opened on click
+	NSString* appGroupContentPath = appGroup.contentPath;
+
+	NSMenuItem* item =
+	[[NSMenuItem alloc] initWithTitle:title action:@selector(openInWithModifier:)
+						keyEquivalent:@""];
+
+	[item setRepresentedObject:appGroupContentPath];
+	[item setImage:[NSImage imageNamed:@"app_group"]];
+
+	[self addSubMenusToItem:item usingPath:appGroupContentPath];
+
+	[menu addItem:item];
 }
 
 //----------------------------------------------------------------------------
@@ -271,31 +294,44 @@
 }
 
 //----------------------------------------------------------------------------
-- (NSArray<Application*>*) installedAppsOnSimulator:(Simulator*)simulator
+- (NSArray<NSObject*>*) installedAppsAndAppGroupsOnSimulator:(Simulator*)simulator
 {
     NSString* installedApplicationsDataPath =
     [simulator.path stringByAppendingString:@"data/Containers/Data/Application/"];
+
+	NSString* installedAppGroupsDataPath =
+	[simulator.path stringByAppendingString:@"data/Containers/Shared/AppGroup/"];
     
-    NSArray* installedApplications =
-    [FileManager getSortedFilesFromFolder:installedApplicationsDataPath];
+    NSArray* installedApplicationsAndAppGroups =
+    [FileManager getSortedFilesFromFolders:@[installedApplicationsDataPath, installedAppGroupsDataPath]];
     
-    NSMutableArray* userApplications = [NSMutableArray new];
+    NSMutableArray* userAppsAndAppGroups = [NSMutableArray new];
     
-    for (NSDictionary* app in installedApplications)
+    for (NSDictionary* data in installedApplicationsAndAppGroups)
     {
-        Application* application = [Application applicationWithDictionary:app simulator:simulator];
-        
-        if (application)
-        {
-            if (!application.isAppleApplication)
-            {
-                [userApplications addObject:application];
-            }
-        }
+		if ([data[KEY_FILE_DIR] isEqualToString:installedApplicationsDataPath]) {
+			Application* application = [Application applicationWithDictionary:data simulator:simulator];
+			if (application)
+			{
+				if (!application.isAppleApplication)
+				{
+					[userAppsAndAppGroups addObject:application];
+				}
+			}
+		} else {
+			AppGroup* appGroup = [AppGroup appGroupWithDictionary:data simulator:simulator];
+			if (appGroup)
+			{
+				if (!appGroup.isAppleApplication)
+				{
+					[userAppsAndAppGroups addObject:appGroup];
+				}
+			}
+		}
 
     }
     
-    return userApplications;
+    return userAppsAndAppGroups;
 }
 
 //----------------------------------------------------------------------------
@@ -343,9 +379,9 @@
     int simulatorsCount = 0;
     for (Simulator* simulator in recentSimulators)
     {
-        NSArray<Application*>* installedApplications = [self installedAppsOnSimulator:simulator];
+        NSArray<NSObject*>* installedApplicationsAndAppGroups = [self installedAppsAndAppGroupsOnSimulator:simulator];
 
-        if ([installedApplications count])
+        if ([installedApplicationsAndAppGroups count])
         {
             NSString* simulator_title = [NSString stringWithFormat:@"%@ (%@)",
                                          simulator.name,
@@ -354,8 +390,8 @@
             NSMenuItem* simulatorMenuItem = [[NSMenuItem alloc] initWithTitle:simulator_title action:nil keyEquivalent:@""];
             [simulatorMenuItem setEnabled:NO];
             [menu addItem:simulatorMenuItem];
-            [self addApplications:installedApplications toMenu:menu];
-            
+            [self addApplicationsAndAppGroups:installedApplicationsAndAppGroups toMenu:menu];
+
             simulatorsCount++;
             if (simulatorsCount >= MAX_RECENT_SIMULATORS)
                 break;
